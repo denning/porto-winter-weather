@@ -17,6 +17,67 @@ import data2023 from "./data/2023-24.json";
 import data2024 from "./data/2024-25.json";
 import data2025 from "./data/2025-26.json";
 
+const TRANSLATIONS = {
+  en: {
+    title: "Porto Winter Weather",
+    subtitle: "Historical daily weather · Dec 1 – Jan 31 · 2020-21 through 2025-26",
+    source: "41.15°N, 8.61°W · Source: Open-Meteo Archive API",
+    smoothBtn: "7d avg",
+    dec: "Dec",
+    jan: "Jan",
+    both: "Both",
+    summaryTitle: "Monthly Averages Summary",
+    winter: "Winter",
+    metric: "Metric",
+    decAvg: "Dec Avg",
+    janAvg: "Jan Avg",
+    overall: "Overall",
+    footer: "Data from Open-Meteo Historical Weather API · Not for commercial use",
+    metrics: {
+      temperature_2m_mean: "Mean Temperature (°C)",
+      precipitation_sum: "Daily Precipitation (mm)",
+      cloud_cover_mean: "Mean Cloud Cover (%)",
+      sunshine_duration: "Sunshine Duration (hours)",
+    },
+    units: {
+      "°C": "°C",
+      mm: "mm",
+      "%": "%",
+      h: "h",
+    },
+    dayLabel: (dayNum) => dayNum < 31 ? `Dec ${dayNum + 1}` : `Jan ${dayNum - 30}`,
+  },
+  ru: {
+    title: "Зимняя погода в Порту",
+    subtitle: "Ежедневные данные · 1 дек – 31 янв · с 2020-21 по 2025-26",
+    source: "41.15°N, 8.61°W · Источник: Open-Meteo Archive API",
+    smoothBtn: "Ср. 7д",
+    dec: "Дек",
+    jan: "Янв",
+    both: "Оба",
+    summaryTitle: "Сводка средних за месяц",
+    winter: "Зима",
+    metric: "Показатель",
+    decAvg: "Ср. дек",
+    janAvg: "Ср. янв",
+    overall: "Общее",
+    footer: "Данные из Open-Meteo Historical Weather API · Не для коммерческого использования",
+    metrics: {
+      temperature_2m_mean: "Средняя температура (°C)",
+      precipitation_sum: "Суточные осадки (мм)",
+      cloud_cover_mean: "Средняя облачность (%)",
+      sunshine_duration: "Продолжительность солнечного сияния (ч)",
+    },
+    units: {
+      "°C": "°C",
+      mm: "мм",
+      "%": "%",
+      h: "ч",
+    },
+    dayLabel: (dayNum) => dayNum < 31 ? `Дек ${dayNum + 1}` : `Янв ${dayNum - 30}`,
+  },
+};
+
 const WINTERS = [
   { label: "2020-21", daily: data2020.daily, startYear: 2020 },
   { label: "2021-22", daily: data2021.daily, startYear: 2021 },
@@ -29,12 +90,11 @@ const WINTERS = [
 const COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899"];
 
 const METRICS = [
-  { key: "temperature_2m_mean", title: "Mean Temperature (°C)", unit: "°C" },
-  { key: "precipitation_sum", title: "Daily Precipitation (mm)", unit: "mm" },
-  { key: "cloud_cover_mean", title: "Mean Cloud Cover (%)", unit: "%" },
+  { key: "temperature_2m_mean", unit: "°C" },
+  { key: "precipitation_sum", unit: "mm" },
+  { key: "cloud_cover_mean", unit: "%" },
   {
     key: "sunshine_duration",
-    title: "Sunshine Duration (hours)",
     unit: "h",
     transform: (v) => (v != null ? +(v / 3600).toFixed(2) : null),
   },
@@ -63,16 +123,13 @@ function movingAverage(points, winterLabels, window = 7) {
   });
 }
 
-function formatDayLabel(dayNum) {
-  if (dayNum < 31) {
-    return `Dec ${dayNum + 1}`;
-  }
-  return `Jan ${dayNum - 30}`;
-}
-
 export default function WeatherDashboard() {
+  const [lang, setLang] = useState("en");
   const [monthFilter, setMonthFilter] = useState("both");
   const [smooth, setSmooth] = useState(false);
+  const t = TRANSLATIONS[lang];
+  const formatDayLabel = t.dayLabel;
+  const u = (unit) => t.units[unit] || unit;
   const [hiddenLines, setHiddenLines] = useState(() =>
     Object.fromEntries(METRICS.map((m) => [m.key, new Set()]))
   );
@@ -144,8 +201,8 @@ export default function WeatherDashboard() {
       );
       summaryRows.push({
         winter: label,
-        metric: metric.title,
-        unit: metric.unit,
+        metric: t.metrics[metric.key],
+        unit: u(metric.unit),
         dec: decAvg,
         jan: janAvg,
         overall: allAvg,
@@ -164,16 +221,34 @@ export default function WeatherDashboard() {
         <header className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-white">
-              Porto Winter Weather
+              {t.title}
             </h1>
             <p className="text-gray-400 mt-1">
-              Historical daily weather · Dec 1 – Jan 31 · 2020-21 through 2025-26
+              {t.subtitle}
             </p>
             <p className="text-gray-500 text-sm mt-0.5">
-              41.15°N, 8.61°W · Source: Open-Meteo Archive API
+              {t.source}
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <div className="flex rounded-lg bg-gray-900 border border-gray-700 p-0.5 text-sm">
+              {[
+                { value: "en", label: "EN" },
+                { value: "ru", label: "RU" },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setLang(opt.value)}
+                  className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
+                    lang === opt.value
+                      ? "bg-blue-600 text-white"
+                      : "text-gray-400 hover:text-gray-200"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
             <button
               onClick={() => setSmooth((s) => !s)}
               className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors ${
@@ -182,13 +257,13 @@ export default function WeatherDashboard() {
                   : "bg-gray-900 border-gray-700 text-gray-400 hover:text-gray-200"
               }`}
             >
-              7d avg
+              {t.smoothBtn}
             </button>
             <div className="flex rounded-lg bg-gray-900 border border-gray-700 p-0.5 text-sm">
               {[
-                { value: "dec", label: "Dec" },
-                { value: "both", label: "Both" },
-                { value: "jan", label: "Jan" },
+                { value: "dec", label: t.dec },
+                { value: "both", label: t.both },
+                { value: "jan", label: t.jan },
               ].map((opt) => (
                 <button
                   key={opt.value}
@@ -213,7 +288,7 @@ export default function WeatherDashboard() {
               className="bg-gray-900 border border-gray-800 rounded-xl p-5"
             >
               <h2 className="text-lg font-semibold text-gray-200 mb-4">
-                {metric.title}
+                {t.metrics[metric.key]}
               </h2>
               <ResponsiveContainer width="100%" height={280}>
                 <LineChart
@@ -240,7 +315,7 @@ export default function WeatherDashboard() {
                     itemStyle={{ color: "#e5e7eb" }}
                     labelStyle={{ color: "#9ca3af", fontWeight: 600 }}
                     formatter={(value) =>
-                      value != null ? `${value.toFixed(1)} ${metric.unit}` : "N/A"
+                      value != null ? `${value.toFixed(1)} ${u(metric.unit)}` : "N/A"
                     }
                   />
                   <Legend
@@ -281,16 +356,16 @@ export default function WeatherDashboard() {
 
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 overflow-x-auto">
           <h2 className="text-xl font-semibold text-gray-200 mb-4">
-            Monthly Averages Summary
+            {t.summaryTitle}
           </h2>
           <table className="w-full text-sm text-left">
             <thead>
               <tr className="border-b border-gray-700 text-gray-400">
-                <th className="py-2 pr-4 font-medium">Winter</th>
-                <th className="py-2 pr-4 font-medium">Metric</th>
-                {monthFilter !== "jan" && <th className="py-2 pr-4 font-medium text-right">Dec Avg</th>}
-                {monthFilter !== "dec" && <th className="py-2 pr-4 font-medium text-right">Jan Avg</th>}
-                {monthFilter === "both" && <th className="py-2 pr-4 font-medium text-right">Overall</th>}
+                <th className="py-2 pr-4 font-medium">{t.winter}</th>
+                <th className="py-2 pr-4 font-medium">{t.metric}</th>
+                {monthFilter !== "jan" && <th className="py-2 pr-4 font-medium text-right">{t.decAvg}</th>}
+                {monthFilter !== "dec" && <th className="py-2 pr-4 font-medium text-right">{t.janAvg}</th>}
+                {monthFilter === "both" && <th className="py-2 pr-4 font-medium text-right">{t.overall}</th>}
               </tr>
             </thead>
             <tbody>
@@ -331,7 +406,7 @@ export default function WeatherDashboard() {
         </div>
 
         <footer className="mt-6 text-center text-gray-600 text-xs">
-          Data from Open-Meteo Historical Weather API · Not for commercial use
+          {t.footer}
         </footer>
       </div>
     </div>
