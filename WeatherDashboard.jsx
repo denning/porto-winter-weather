@@ -46,6 +46,23 @@ function dayIndex(dateStr, startYear) {
   return Math.round((d - dec1) / 86400000);
 }
 
+function movingAverage(points, winterLabels, window = 7) {
+  const half = Math.floor(window / 2);
+  return points.map((pt, i) => {
+    const smoothed = { ...pt };
+    for (const label of winterLabels) {
+      const vals = [];
+      for (let j = i - half; j <= i + half; j++) {
+        if (j >= 0 && j < points.length && points[j][label] != null) {
+          vals.push(points[j][label]);
+        }
+      }
+      smoothed[label] = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    }
+    return smoothed;
+  });
+}
+
 function formatDayLabel(dayNum) {
   if (dayNum < 31) {
     return `Dec ${dayNum + 1}`;
@@ -55,6 +72,7 @@ function formatDayLabel(dayNum) {
 
 export default function WeatherDashboard() {
   const [monthFilter, setMonthFilter] = useState("both");
+  const [smooth, setSmooth] = useState(false);
   const [hiddenLines, setHiddenLines] = useState(() =>
     Object.fromEntries(METRICS.map((m) => [m.key, new Set()]))
   );
@@ -89,7 +107,10 @@ export default function WeatherDashboard() {
       }
       points.push(entry);
     }
-    chartDataByMetric[metric.key] = points;
+    const winterLabels = WINTERS.map((w) => w.label);
+    chartDataByMetric[metric.key] = smooth
+      ? movingAverage(points, winterLabels)
+      : points;
   }
 
   // Build summary table data
@@ -152,24 +173,36 @@ export default function WeatherDashboard() {
               41.15°N, 8.61°W · Source: Open-Meteo Archive API
             </p>
           </div>
-          <div className="flex rounded-lg bg-gray-900 border border-gray-700 p-0.5 text-sm">
-            {[
-              { value: "dec", label: "Dec" },
-              { value: "both", label: "Both" },
-              { value: "jan", label: "Jan" },
-            ].map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setMonthFilter(opt.value)}
-                className={`px-4 py-1.5 rounded-md font-medium transition-colors ${
-                  monthFilter === opt.value
-                    ? "bg-blue-600 text-white"
-                    : "text-gray-400 hover:text-gray-200"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSmooth((s) => !s)}
+              className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors ${
+                smooth
+                  ? "bg-blue-600 border-blue-500 text-white"
+                  : "bg-gray-900 border-gray-700 text-gray-400 hover:text-gray-200"
+              }`}
+            >
+              7d avg
+            </button>
+            <div className="flex rounded-lg bg-gray-900 border border-gray-700 p-0.5 text-sm">
+              {[
+                { value: "dec", label: "Dec" },
+                { value: "both", label: "Both" },
+                { value: "jan", label: "Jan" },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setMonthFilter(opt.value)}
+                  className={`px-4 py-1.5 rounded-md font-medium transition-colors ${
+                    monthFilter === opt.value
+                      ? "bg-blue-600 text-white"
+                      : "text-gray-400 hover:text-gray-200"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
         </header>
 
