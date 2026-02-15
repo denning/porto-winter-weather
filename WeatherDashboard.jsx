@@ -54,6 +54,7 @@ function formatDayLabel(dayNum) {
 }
 
 export default function WeatherDashboard() {
+  const [monthFilter, setMonthFilter] = useState("both");
   const [hiddenLines, setHiddenLines] = useState(() =>
     Object.fromEntries(METRICS.map((m) => [m.key, new Set()]))
   );
@@ -67,11 +68,16 @@ export default function WeatherDashboard() {
     });
   }
 
+  const dayRange =
+    monthFilter === "dec" ? [0, 31] :
+    monthFilter === "jan" ? [31, 62] :
+    [0, 62];
+
   // Build chart data: array of { day, dayLabel, "2020-21": val, "2021-22": val, ... }
   const chartDataByMetric = {};
   for (const metric of METRICS) {
     const points = [];
-    for (let day = 0; day < 62; day++) {
+    for (let day = dayRange[0]; day < dayRange[1]; day++) {
       const entry = { day, dayLabel: formatDayLabel(day) };
       for (const winter of WINTERS) {
         const idx = winter.daily.time.findIndex(
@@ -126,21 +132,45 @@ export default function WeatherDashboard() {
     }
   }
 
-  const tickIndices = [0, 10, 20, 30, 31, 41, 51, 61];
+  const tickIndices =
+    monthFilter === "dec" ? [0, 5, 10, 15, 20, 25, 30] :
+    monthFilter === "jan" ? [31, 36, 41, 46, 51, 56, 61] :
+    [0, 10, 20, 30, 31, 41, 51, 61];
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold text-white">
-            Porto Winter Weather
-          </h1>
-          <p className="text-gray-400 mt-1">
-            Historical daily weather · Dec 1 – Jan 31 · 2020-21 through 2025-26
-          </p>
-          <p className="text-gray-500 text-sm mt-0.5">
-            41.15°N, 8.61°W · Source: Open-Meteo Archive API
-          </p>
+        <header className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-white">
+              Porto Winter Weather
+            </h1>
+            <p className="text-gray-400 mt-1">
+              Historical daily weather · Dec 1 – Jan 31 · 2020-21 through 2025-26
+            </p>
+            <p className="text-gray-500 text-sm mt-0.5">
+              41.15°N, 8.61°W · Source: Open-Meteo Archive API
+            </p>
+          </div>
+          <div className="flex rounded-lg bg-gray-900 border border-gray-700 p-0.5 text-sm">
+            {[
+              { value: "dec", label: "Dec" },
+              { value: "both", label: "Both" },
+              { value: "jan", label: "Jan" },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setMonthFilter(opt.value)}
+                className={`px-4 py-1.5 rounded-md font-medium transition-colors ${
+                  monthFilter === opt.value
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-400 hover:text-gray-200"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </header>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-10">
@@ -225,9 +255,9 @@ export default function WeatherDashboard() {
               <tr className="border-b border-gray-700 text-gray-400">
                 <th className="py-2 pr-4 font-medium">Winter</th>
                 <th className="py-2 pr-4 font-medium">Metric</th>
-                <th className="py-2 pr-4 font-medium text-right">Dec Avg</th>
-                <th className="py-2 pr-4 font-medium text-right">Jan Avg</th>
-                <th className="py-2 pr-4 font-medium text-right">Overall</th>
+                {monthFilter !== "jan" && <th className="py-2 pr-4 font-medium text-right">Dec Avg</th>}
+                {monthFilter !== "dec" && <th className="py-2 pr-4 font-medium text-right">Jan Avg</th>}
+                {monthFilter === "both" && <th className="py-2 pr-4 font-medium text-right">Overall</th>}
               </tr>
             </thead>
             <tbody>
@@ -245,15 +275,21 @@ export default function WeatherDashboard() {
                       {isFirstOfWinter ? row.winter : ""}
                     </td>
                     <td className="py-1.5 pr-4 text-gray-300">{row.metric}</td>
-                    <td className="py-1.5 pr-4 text-right text-gray-200">
-                      {row.dec != null ? `${row.dec.toFixed(1)} ${row.unit}` : "—"}
-                    </td>
-                    <td className="py-1.5 pr-4 text-right text-gray-200">
-                      {row.jan != null ? `${row.jan.toFixed(1)} ${row.unit}` : "—"}
-                    </td>
-                    <td className="py-1.5 pr-4 text-right font-medium text-white">
-                      {row.overall != null ? `${row.overall.toFixed(1)} ${row.unit}` : "—"}
-                    </td>
+                    {monthFilter !== "jan" && (
+                      <td className="py-1.5 pr-4 text-right text-gray-200">
+                        {row.dec != null ? `${row.dec.toFixed(1)} ${row.unit}` : "—"}
+                      </td>
+                    )}
+                    {monthFilter !== "dec" && (
+                      <td className="py-1.5 pr-4 text-right text-gray-200">
+                        {row.jan != null ? `${row.jan.toFixed(1)} ${row.unit}` : "—"}
+                      </td>
+                    )}
+                    {monthFilter === "both" && (
+                      <td className="py-1.5 pr-4 text-right font-medium text-white">
+                        {row.overall != null ? `${row.overall.toFixed(1)} ${row.unit}` : "—"}
+                      </td>
+                    )}
                   </tr>
                 );
               })}
